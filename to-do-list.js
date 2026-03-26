@@ -4,7 +4,6 @@ const timeInput = document.getElementById("timeInput");
 const addBtn = document.getElementById("addBtn");
 const taskList = document.getElementById("taskList");
 
-
 // 🔔 Ask notification permission
 if (Notification.permission !== "granted") {
     Notification.requestPermission();
@@ -14,6 +13,7 @@ window.onload = loadTasks;
 
 addBtn.addEventListener("click", addTask);
 
+// ➕ Add Task
 function addTask() {
     const text = taskInput.value.trim();
     const date = dateInput.value;
@@ -24,7 +24,13 @@ function addTask() {
         return;
     }
 
-    const task = { text, date, time, completed: false, alerted: false };
+    const task = {
+        text,
+        date,
+        time,
+        completed: false,
+        alerted: false
+    };
 
     createTask(task);
     saveTask(task);
@@ -34,19 +40,28 @@ function addTask() {
     timeInput.value = "";
 }
 
+// 🧱 Create Task UI
 function createTask(task) {
     const li = document.createElement("li");
 
+    // ⭐ store full task object
+    li.dataset.task = JSON.stringify(task);
+
     const span = document.createElement("span");
-    span.textContent = `${task.text} ${task.date ? "📅 " + task.date : ""} ${task.time ? "⏰ " + task.time : ""}`;
+    span.textContent =
+        `${task.text}` +
+        (task.date ? ` 📅 ${task.date}` : "") +
+        (task.time ? ` ⏰ ${task.time}` : "");
 
     if (task.completed) span.classList.add("completed");
 
+    // ✔ Toggle complete
     span.onclick = () => {
         span.classList.toggle("completed");
         updateStorage();
     };
 
+    // ❌ Delete button
     const delBtn = document.createElement("button");
     delBtn.textContent = "❌";
 
@@ -60,29 +75,36 @@ function createTask(task) {
     taskList.appendChild(li);
 }
 
+// 💾 Save Task
 function saveTask(task) {
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     tasks.push(task);
     localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
+// 📂 Load Tasks
 function loadTasks() {
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     tasks.forEach(task => createTask(task));
 }
 
+// 🔄 Update Storage (FIXED)
 function updateStorage() {
     let tasks = [];
 
     document.querySelectorAll("#taskList li").forEach(li => {
-        let text = li.querySelector("span").textContent;
-        tasks.push({ text, completed: false, alerted: false });
+        let task = JSON.parse(li.dataset.task);
+
+        let span = li.querySelector("span");
+        task.completed = span.classList.contains("completed");
+
+        tasks.push(task);
     });
 
     localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
-/* 🔔 Notification */
+// 🔔 Notification
 function showNotification(text) {
     if (Notification.permission === "granted") {
         new Notification("⏰ Reminder", {
@@ -91,7 +113,7 @@ function showNotification(text) {
     }
 }
 
-/* ⏰ Reminder */
+// ⏰ Reminder Checker (FIXED)
 function checkReminders() {
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     let now = new Date();
@@ -103,7 +125,7 @@ function checkReminders() {
             if (now >= taskTime) {
                 showPopup(task.text);
                 showNotification(task.text);
-                alarmSound.play();
+
                 task.alerted = true;
             }
         }
@@ -112,16 +134,18 @@ function checkReminders() {
     localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
+// Run every second
 setInterval(checkReminders, 1000);
 
-/* Popup */
+// 📢 Popup
 function showPopup(text) {
     document.getElementById("popupText").innerText = "⏰ " + text;
     document.getElementById("reminderPopup").style.display = "block";
+
+    // auto close after 5 sec
+    setTimeout(closePopup, 5000);
 }
 
 function closePopup() {
     document.getElementById("reminderPopup").style.display = "none";
-    alarmSound.pause();
-    alarmSound.currentTime = 0;
 }
